@@ -1,3 +1,6 @@
+# Simulate sensor events for the Spark Structured Streaming pipeline.
+# One process keeps a stable sensor ID and publishes ten JSON readings.
+
 # 1. Генерація потоку даних:
 # Вхідні дані — це дані з Kafka-топіку, такі самі, як і в попередньому домашньому завданні. Згенеруйте потік даних,
 # що містить id, temperature , humidity, timestamp . Можна використати раніше написаний вами скрипт та топік.
