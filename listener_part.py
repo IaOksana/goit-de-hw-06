@@ -1,3 +1,5 @@
+# Consume and display alerts emitted by the Spark streaming pipeline.
+
 from kafka import KafkaConsumer
 from configs import kafka_config
 import json
