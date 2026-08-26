@@ -1,3 +1,7 @@
+# Aggregate Kafka sensor events in sliding event-time windows and route matching
+# alert conditions back to Kafka. Thresholds are loaded from alerts_conditions.csv
+# so operational rules can change without changing this pipeline code.
+
 # 2. Агрегація даних:
 # Зчитайте потік даних, що ви згенерували в першому пункті. За допомогою Sliding window, що має довжину 1 хвилину,
 # sliding_interval — 30 секунд, та watermark duration — 10 секунд, знайдіть середню температуру та вологість.
@@ -10,6 +14,7 @@
 # 4. Побудова визначення алертів:
 # Після того, як ви знайшли середні значення, необхідно встановити, чи підпадають вони під критерії у файлі (підказка: виконайте cross join та фільтрацію).
 #
+# Serialize matched alerts as JSON and publish them to Kafka.
 # 5. Запис даних у Kafka-топік:
 # Отримані алерти запишіть у вихідний Kafka-топік.
 # Приклад повідомлення в Kafka, що є результатом роботи цього коду:
@@ -21,10 +26,12 @@ from pyspark.sql.functions import window
 from configs import kafka_config
 import os
 
+# Configure the Kafka connector packages before creating the Spark context.
 # Пакет, необхідний для читання Kafka зі Spark
 os.environ[
     'PYSPARK_SUBMIT_ARGS'] = '--packages org.apache.spark:spark-streaming-kafka-0-10_2.13:3.5.1,org.apache.spark:spark-sql-kafka-0-10_2.13:3.5.1 pyspark-shell'
 
+# Create the local Spark session used by the streaming query.
 # Створення SparkSession
 
 import pyspark
@@ -84,6 +91,7 @@ parsed = ((df.select(
          .start())
 '''
 
+# Compute one-minute averages every 30 seconds using event-time windows.
 # знайдіть середню температуру та вологість
 avgDF = (parsed
          .groupBy(window(col("event_time"), "1 minute", "30 seconds"))
@@ -112,7 +120,8 @@ query.awaitTermination()
 # Файл містить максимальні та мінімальні значення для температури й вологості, повідомлення та код алерту.
 # Значення -999,-999 вказують, що вони не використовується для цього алерту.
 # Подивіться на дані в файлі. Вони мають бути інтуїтивно зрозумілі. Ви маєте зчитати дані з файлу та використати для налаштування алертів.
-#id,humidity_min,humidity_max,temperature_min,temperature_max,code,message
+# Load static alert rules and replace -999 sentinels with null bounds.
+# id,humidity_min,humidity_max,temperature_min,temperature_max,code,message
 alerts_schema = StructType([
     StructField("id", IntegerType(), True),
     StructField("humidity_min", IntegerType(), True),
@@ -137,6 +146,7 @@ alerts_static = (
 # 4. Побудова визначення алертів:
 # Після того, як ви знайшли середні значення, необхідно встановити, чи підпадають вони під критерії у файлі
 # (підказка: виконайте cross join та фільтрацію).
+# Cross-join every aggregate window with the static rule table, then filter matches.
 # 1) if only one output topic
 joined = avgDF.crossJoin(alerts_static)
 
@@ -197,6 +207,7 @@ query = (
     .start()
 )
 
+# The following alternative keeps temperature and humidity alert streams separate.
 # 2) if 2 output topics: one for temperature and one for humidity
 
 temp_alerts_df = (
