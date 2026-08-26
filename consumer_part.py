@@ -53,7 +53,9 @@ df = spark \
     .option("kafka.security.protocol", "SASL_PLAINTEXT") \
     .option("kafka.sasl.mechanism", "PLAIN") \
     .option("kafka.sasl.jaas.config",
-            'org.apache.kafka.common.security.plain.PlainLoginModule required username="admin" password="VawEzo1ikLtrA8Ug8THa";') \
+            f'org.apache.kafka.common.security.plain.PlainLoginModule required '
+            f'username="{kafka_config["username"]}" '
+            f'password="{kafka_config["password"]}";') \
     .option("subscribe", input_topic_name) \
     .option("startingOffsets", "earliest") \
     .load()
