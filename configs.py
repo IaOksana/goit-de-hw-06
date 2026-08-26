@@ -1,6 +1,7 @@
 import os
 
 
+# Fail immediately when a required Kafka connection setting is missing.
 def _required_env(name: str) -> str:
     value = os.getenv(name)
     if not value:
@@ -11,6 +12,7 @@ def _required_env(name: str) -> str:
     return value
 
 
+# Centralize broker authentication and allow safe protocol defaults.
 kafka_config = {
     "bootstrap_servers": [_required_env("KAFKA_BOOTSTRAP_SERVERS")],
     "username": _required_env("KAFKA_USERNAME"),
